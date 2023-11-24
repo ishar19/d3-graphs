@@ -14,7 +14,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <h1 className="text-4xl font-bold mb-8 text-gray-100 text-center">
-        NextUI Charts
+        D3 and react Charts
       </h1>
       <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-1 gap-6 mx-auto max-w-7xl">
         <div className="bg-gray-800 rounded-md shadow-md">
