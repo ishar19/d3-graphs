@@ -1,145 +1,131 @@
-/* eslint-disable no-unused-vars */
-import React, { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
 
 const AreaChart = () => {
-  const [data, setData] = useState([
-    { date: new Date("2023-01-01"), value: 20, category: "Category A" },
-    { date: new Date("2023-02-01"), value: 35, category: "Category A" },
-    { date: new Date("2023-03-01"), value: 25, category: "Category A" },
-    { date: new Date("2023-04-01"), value: 40, category: "Category A" },
-    { date: new Date("2023-05-01"), value: 30, category: "Category A" },
-    { date: new Date("2023-01-01"), value: 15, category: "Category B" },
-    { date: new Date("2023-02-01"), value: 28, category: "Category B" },
-    { date: new Date("2023-03-01"), value: 22, category: "Category B" },
-    { date: new Date("2023-04-01"), value: 35, category: "Category B" },
-    { date: new Date("2023-05-01"), value: 25, category: "Category B" },
-  ]);
-
   const svgRef = useRef();
+  const tooltipRef = useRef();
+  const [selectedMaritalStatus, setSelectedMaritalStatus] = useState("All");
+  const [selectedOverTime, setSelectedOverTime] = useState("All");
+  const [selectedJobLevel, setSelectedJobLevel] = useState("All");
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await d3.csv("../../data.csv");
+      setData(data);
+    };
+
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    const margin = { top: 20, right: 30, bottom: 50, left: 50 };
-    const width = svg.attr("width") - margin.left - margin.right;
-    const height = svg.attr("height") - margin.top - margin.bottom;
+    const tooltip = d3.select(tooltipRef.current);
 
-    // Clear previous elements
     svg.selectAll("*").remove();
 
-    const categories = [...new Set(data.map((d) => d.category))];
-    const color = d3.scaleOrdinal(d3.schemeCategory10).domain(categories);
+    if (data.length === 0) return;
 
-    const x = d3
-      .scaleTime()
-      .domain(d3.extent(data, (d) => d.date))
-      .range([margin.left, width - margin.right]);
+    let filteredData = data;
 
-    const y = d3
-      .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.value)])
-      .nice()
-      .range([height - margin.bottom, margin.top]);
+    if (selectedMaritalStatus !== "All") {
+      filteredData = data.filter(
+        (d) => d.MaritalStatus === selectedMaritalStatus
+      );
+    }
+
+    if (selectedOverTime !== "All") {
+      filteredData = data.filter((d) => d.OverTime === selectedOverTime);
+    }
+
+    if (selectedJobLevel !== "All") {
+      filteredData = data.filter((d) => d.JobLevel === selectedJobLevel);
+    }
+
+    const color = d3
+      .scaleOrdinal()
+      .domain(["Male", "Female"])
+      .range(["blue", "red"]);
+
+    const margin = { top: 20, right: 20, bottom: 50, left: 50 };
+    const width = 600 - margin.left - margin.right;
+    const height = 400 - margin.top - margin.bottom;
+
+    const x = d3.scaleLinear().domain([20, 60]).range([0, width]);
+    const y = d3.scaleLinear().domain([1, 5]).range([height, 0]);
 
     const area = d3
       .area()
-      .x((d) => x(d.date))
-      .y0(y(0))
-      .y1((d) => y(d.value));
+      .x((d) => x(+d.Age))
+      .y0(height)
+      .y1((d) => y(+d.JobLevel));
 
     svg
-      .selectAll(".area")
-      .data(categories)
-      .enter()
       .append("path")
-      .attr("class", "area")
-      .datum((category) => data.filter((d) => d.category === category))
-      .attr("fill", (d) => color(d[0].category))
-      .attr("opacity", 0.7)
-      .attr("d", area);
+      .datum(filteredData)
+      .attr("d", area)
+      .attr("fill", "lightblue");
 
-    svg
-      .append("g")
-      .attr("transform", `translate(0,${height - margin.bottom})`)
-      .call(d3.axisBottom(x))
-      .attr("stroke", "#ffffff");
-    svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},0)`)
-      .call(d3.axisLeft(y))
-      .attr("stroke", "#ffffff");
-
-    svg
-      .selectAll(".dot")
-      .data(data)
-      .enter()
-      .append("circle")
-      .attr("class", "dot")
-      .attr("cx", (d) => x(d.date))
-      .attr("cy", (d) => y(d.value))
-      .attr("r", 5)
-      .on("mouseover", (event, d) => {
-        const tooltip = d3.select(".tooltip");
-        tooltip.transition().duration(200).style("opacity", 0.9);
-        tooltip
-          .html(`Category: ${d.category}<br/>Value: ${d.value}`)
-          .style("left", `${event.pageX}px`)
-          .style("top", `${event.pageY}px`);
-      })
-      .on("mouseout", () => {
-        const tooltip = d3.select(".tooltip");
-        tooltip.transition().duration(500).style("opacity", 0);
-      });
-
-    // Legend
-    const legend = svg
-      .append("g")
-      .attr("class", "legend")
-      .attr("transform", `translate(${width - 100},${margin.top})`);
-
-    legend
-      .selectAll(".legend-item")
-      .data(categories)
-      .enter()
-      .append("rect")
-      .attr("class", "legend-item")
-      .attr("x", 0)
-      .attr("y", (d, i) => i * 20)
-      .attr("width", 10)
-      .attr("height", 10)
-      .attr("fill", (d) => color(d));
-
-    legend
-      .selectAll(".legend-text")
-      .data(categories)
-      .enter()
-      .append("text")
-      .attr("class", "legend-text")
-      .attr("x", 15)
-      .attr("y", (d, i) => i * 20 + 10)
-      .text((d) => d)
-      .attr("font-size", "12px")
-      .attr("fill", "#ffffff");
-  }, [data]);
+    filteredData.forEach((d) => {
+      svg
+        .append("circle")
+        .attr("cx", x(+d.Age))
+        .attr("cy", y(+d.JobLevel))
+        .attr("r", 5)
+        .attr("fill", color(d.Gender))
+        .on("mouseover", (event, d) => {
+          tooltip
+            .style("opacity", 0.9)
+            .html(
+              `Age: ${d.Age}, JobLevel: ${d.JobLevel}, Gender: ${d.Gender}, Department: ${d.Department}`
+            )
+            .style("left", `${event.pageX}px`)
+            .style("top", `${event.pageY - 28}px`);
+        })
+        .on("mouseout", () => {
+          tooltip.style("opacity", 0);
+        });
+    });
+  }, [data, selectedMaritalStatus, selectedOverTime, selectedJobLevel]);
 
   return (
-    <div
-      style={{ position: "relative" }}
-      className="bg-gray-900 text-white border border-gray-300"
-    >
-      <svg
-        ref={svgRef}
-        width={1000}
-        height={500}
-        // className="bg-gray-900 text-white border border-gray-300"
-      >
-        {/* Axes will be drawn within this SVG */}
-        <div
-          className="tooltip"
-          style={{ opacity: 0, position: "absolute", zIndex: 10 }}
-        />
-      </svg>
-    </div>
+    <>
+      <div>
+        <label>Select Marital Status: </label>
+        <select
+          value={selectedMaritalStatus}
+          onChange={(e) => setSelectedMaritalStatus(e.target.value)}
+        >
+          <option value="All">All</option>
+          <option value="Single">Single</option>
+          <option value="Married">Married</option>
+          <option value="Divorced">Divorced</option>
+        </select>
+        <label>Select OverTime: </label>
+        <select
+          value={selectedOverTime}
+          onChange={(e) => setSelectedOverTime(e.target.value)}
+        >
+          <option value="All">All</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+        <label>Select Job Level: </label>
+        <select
+          value={selectedJobLevel}
+          onChange={(e) => setSelectedJobLevel(e.target.value)}
+        >
+          <option value="All">All</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+      <svg ref={svgRef} width={600} height={400}></svg>
+      <div ref={tooltipRef}></div>
+    </>
   );
 };
 

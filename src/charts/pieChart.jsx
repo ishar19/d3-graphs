@@ -1,40 +1,64 @@
-/* eslint-disable no-unused-vars */
-import React, { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
 
 const PieChart = () => {
-  const generateData = () => {
-    const numberOfCategories = 5;
-    return d3.range(numberOfCategories).map((i) => ({
-      category: `Category ${i + 1}`,
-      value: Math.random() * 100,
-    }));
-  };
-
-  const [data, setData] = useState(generateData());
-
   const svgRef = useRef();
   const tooltipRef = useRef();
+  const [selectedGender, setSelectedGender] = useState("Both");
+  const [processedData, setProcessedData] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await d3.csv("../../data.csv");
+      let filteredData = data;
+
+      if (selectedGender !== "Both") {
+        filteredData = data.filter((d) => d.Gender === selectedGender);
+      }
+
+      const counts = d3.rollup(
+        filteredData,
+        (v) => v.length,
+        (d) => d["MaritalStatus"]
+      );
+
+      const newData = Array.from(counts, ([label, value]) => ({
+        label,
+        value,
+      }));
+
+      setProcessedData(newData);
+    };
+
+    fetchData();
+  }, [selectedGender]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
+    const tooltip = d3.select(tooltipRef.current);
 
-    const width = 500;
-    const height = 500;
-    const radius = Math.min(width, height) / 2;
+    svg.selectAll("*").remove();
 
-    const color = d3.scaleOrdinal(d3.schemeCategory10);
+    if (processedData.length === 0) return;
 
-    const pie = d3.pie().value((d) => d.value);
+    const margin = 40;
+    const width = 400;
+    const height = 400;
 
-    const arc = d3
-      .arc()
-      .innerRadius(0)
-      .outerRadius(radius - 50);
+    const radius = Math.min(width, height) / 2 - margin;
+
+    const color = d3.scaleOrdinal().range(d3.schemeCategory10);
+
+    const pie = d3
+      .pie()
+      .value((d) => d.value)
+      .sort(null);
+
+    const arc = d3.arc().innerRadius(0).outerRadius(radius);
 
     const arcs = svg
-      .selectAll(".arc")
-      .data(pie(data))
+      .selectAll("arc")
+      .data(pie(processedData))
       .enter()
       .append("g")
       .attr("class", "arc")
@@ -43,47 +67,32 @@ const PieChart = () => {
     arcs
       .append("path")
       .attr("d", arc)
-      .attr("fill", (d) => color(d.data.category))
-      .attr("stroke", "white")
-      .style("stroke-width", "2px")
+      .attr("fill", (d, i) => color(i))
       .on("mouseover", (event, d) => {
-        const tooltip = d3.select(tooltipRef.current);
-        tooltip.transition().duration(200).style("opacity", 0.9);
         tooltip
-          .html(
-            `Category: ${d.data.category}<br/>Value: ${d.data.value.toFixed(2)}`
-          )
+          .style("opacity", 0.9)
+          .html(`${d.data.label}: ${d.data.value}`)
           .style("left", `${event.pageX}px`)
-          .style("top", `${event.pageY}px`);
+          .style("top", `${event.pageY - 28}px`);
       })
       .on("mouseout", () => {
-        const tooltip = d3.select(tooltipRef.current);
-        tooltip.transition().duration(500).style("opacity", 0);
+        tooltip.style("opacity", 0);
       });
 
-    arcs
-      .append("text")
-      .attr("transform", (d) => `translate(${arc.centroid(d)})`)
-      .attr("text-anchor", "middle")
-      .text((d) => d.data.category)
-      .style("fill", "white")
-      .style("font-size", "12px");
-
-    // Legend
     const legend = svg
       .selectAll(".legend")
-      .data(pie(data).map((d) => d.data.category))
+      .data(processedData)
       .enter()
       .append("g")
       .attr("class", "legend")
-      .attr("transform", (_, i) => `translate(10,${i * 20})`);
+      .attr("transform", (d, i) => `translate(0,${i * 20})`);
 
     legend
       .append("rect")
       .attr("x", width - 18)
       .attr("width", 18)
       .attr("height", 18)
-      .attr("fill", (d) => color(d));
+      .attr("fill", (d, i) => color(i));
 
     legend
       .append("text")
@@ -91,30 +100,32 @@ const PieChart = () => {
       .attr("y", 9)
       .attr("dy", ".35em")
       .style("text-anchor", "end")
-      .style("fill", "white")
-      .text((d) => d);
-  }, [data]);
+      .attr("fill", "white")
+      .text((d) => d.label);
+  }, [processedData]);
 
   return (
-    <div style={{}}>
+    <>
+      <div>
+        <label className="text-semibold text-white ">Select Gender : </label>
+        <select
+          value={selectedGender}
+          onChange={(e) => setSelectedGender(e.target.value)}
+          className="bg-gray-800 text-white border border-gray-300 rounded-md px-2 py-1"
+        >
+          <option value="Both">Both</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
       <svg
         ref={svgRef}
-        width={500}
-        height={500}
         className="bg-gray-900 text-white border border-gray-300"
-      />
-      <div
-        ref={tooltipRef}
-        className="tooltip"
-        style={{
-          opacity: 0,
-          position: "absolute",
-          backgroundColor: "black",
-          color: "white",
-          padding: "5px",
-        }}
-      />
-    </div>
+        width={400}
+        height={400}
+      ></svg>
+      <div ref={tooltipRef} className="text-white" />
+    </>
   );
 };
 

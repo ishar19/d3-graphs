@@ -1,139 +1,121 @@
 import { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
-import { Skeleton, Card } from "@nextui-org/react";
-const BarChart = () => {
-  const [data, setData] = useState(null);
 
+const BarChart = () => {
   const svgRef = useRef();
+  const tooltipRef = useRef();
+  const [selectedGender, setSelectedGender] = useState("Both");
+  const [processedData, setProcessedData] = useState([]);
 
   useEffect(() => {
-    if (!data) return;
-    const svg = d3.select(svgRef.current);
+    const fetchData = async () => {
+      const data = await d3.csv("../../data.csv");
+      let filteredData = data;
 
-    const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+      if (selectedGender !== "Both") {
+        filteredData = data.filter((d) => d.Gender === selectedGender);
+      }
+
+      const counts = d3.rollup(
+        filteredData,
+        (v) => v.length,
+        (d) => d["BusinessTravel"]
+      );
+      const newData = Array.from(counts, ([label, value]) => ({
+        label,
+        value,
+      }));
+
+      setProcessedData(newData);
+    };
+
+    fetchData();
+  }, [selectedGender]);
+
+  useEffect(() => {
+    const svg = d3.select(svgRef.current);
+    const tooltip = d3.select(tooltipRef.current);
+
+    svg.selectAll("*").remove();
+
+    if (processedData.length === 0) return;
+
+    const margin = { top: 20, right: 30, bottom: 70, left: 60 };
     const width = 600 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
-    const categories = [...new Set(data.map((d) => d.category))];
-    const color = d3
-      .scaleOrdinal()
-      .domain(categories)
-      .range(d3.schemeCategory10);
-
     const x = d3
       .scaleBand()
-      .domain(data.map((d) => d.label))
-      .range([margin.left, width - margin.right])
+      .domain(processedData.map((d) => d.label))
+      .range([0, width])
       .padding(0.1);
 
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.value)])
+      .domain([0, d3.max(processedData, (d) => d.value)])
       .nice()
-      .range([height - margin.bottom, margin.top]);
-
-    const xAxis = (g) =>
-      g
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x));
-
-    const yAxis = (g) =>
-      g.attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y));
+      .range([height, 0]);
 
     svg
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`)
       .selectAll(".bar")
-      .data(data)
-      .join("rect")
+      .data(processedData)
+      .enter()
+      .append("rect")
       .attr("class", "bar")
       .attr("x", (d) => x(d.label))
       .attr("y", (d) => y(d.value))
       .attr("width", x.bandwidth())
-      .attr("height", (d) => y(0) - y(d.value))
-      .attr("fill", (d) => color(d.category))
+      .attr("height", (d) => height - y(d.value))
+      .attr("fill", (d, i) => d3.schemeCategory10[i % 10]) // Different color for each category
       .on("mouseover", (event, d) => {
-        const tooltip = d3.select(".tooltip");
-        tooltip.transition().duration(200).style("opacity", 0.9);
         tooltip
-          .html(`Label: ${d.label}<br/>Value: ${d.value}`)
+          .style("opacity", 0.9)
+          .html(` ${d.label} : ${d.value}`)
           .style("left", `${event.pageX}px`)
           .style("top", `${event.pageY - 28}px`);
       })
       .on("mouseout", () => {
-        const tooltip = d3.select(".tooltip");
-        tooltip.transition().duration(500).style("opacity", 0);
+        tooltip.style("opacity", 0);
       });
 
-    svg.select(".x-axis").call(xAxis);
-    svg.select(".y-axis").call(yAxis);
+    const xAxis = d3.axisBottom(x);
+    const yAxis = d3.axisLeft(y);
 
-    // Legend
-    const legend = svg
+    svg
       .append("g")
-      .attr("class", "legend")
-      .attr("transform", "translate(500,20)");
+      .attr("transform", `translate(${margin.left},${height + margin.top})`)
+      .call(xAxis);
 
-    legend
-      .selectAll(".legend-item")
-      .data(categories)
-      .enter()
-      .append("rect")
-      .attr("class", "legend-item")
-      .attr("x", 0)
-      .attr("y", (d, i) => i * 20)
-      .attr("width", 10)
-      .attr("height", 10)
-      .attr("fill", (d) => color(d));
+    svg
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`)
+      .call(yAxis);
+  }, [processedData]);
 
-    legend
-      .selectAll(".legend-text")
-      .data(categories)
-      .enter()
-      .append("text")
-      .attr("class", "legend-text")
-      .attr("x", 15)
-      .attr("y", (d, i) => i * 20 + 10)
-      .text((d) => d)
-      .attr("font-size", "12px")
-      .attr("fill", "#ffffff");
-  }, [data]);
-
-  useEffect(() => {
-    const getData = async () => {
-      const data = await fetch("https://api.npoint.io/385064785872888c6f06");
-      const dataJson = await data.json();
-      setData(dataJson);
-    };
-    const timeOut = setTimeout(() => {
-      getData();
-    }, 1000);
-    return () => clearTimeout(timeOut);
-  }, []);
   return (
-    <div className="relative">
-      {data ? (
-        <>
-          <svg
-            ref={svgRef}
-            className="bg-gray-900 text-white border border-gray-300"
-            width={600}
-            height={400}
-          >
-            <g className="x-axis" />
-            <g className="y-axis" />
-          </svg>
-          <div className="tooltip bg-gray-800 text-white text-xs p-2 rounded absolute opacity-0 pointer-events-none" />
-        </>
-      ) : (
-        <Card
-          className="w-[800px] space-y-5 p-4 bg-gray-900 h-[600px]"
-          radius="lg"
+    <>
+      <div>
+        <label className="text-semibold text-white ">Select Gender : </label>
+        <select
+          value={selectedGender}
+          onChange={(e) => setSelectedGender(e.target.value)}
+          className="bg-gray-800 text-white border border-gray-300 rounded-md px-2 py-1"
         >
-          <Skeleton className="rounded-lg bg-slate-800">
-            <div className="h-[500px] rounded-lg bg-blue-300"></div>
-          </Skeleton>
-        </Card>
-      )}
-    </div>
+          <option value="Both">Both</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
+      <svg
+        ref={svgRef}
+        className="bg-gray-900 text-white border border-gray-300"
+        width={"50vw"}
+        height={400}
+      ></svg>
+      <div ref={tooltipRef} className="text-white" />
+    </>
   );
 };
 
