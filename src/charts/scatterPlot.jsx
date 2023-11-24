@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
-
+import { Skeleton } from "@nextui-org/react";
 const ScatterPlot = () => {
   const svgRef = useRef();
   const tooltipRef = useRef();
@@ -8,11 +8,14 @@ const ScatterPlot = () => {
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [data, setData] = useState([]);
   const margin = { top: 20, right: 20, bottom: 60, left: 60 };
-
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     const fetchData = async () => {
-      const csvData = await d3.csv("../../data.csv");
+      const csvData = await d3.csv(
+        "https://raw.githubusercontent.com/ishar19/d3-graphs/master/data.csv"
+      );
       setData(csvData);
+      setLoading(false);
     };
 
     fetchData();
@@ -39,6 +42,7 @@ const ScatterPlot = () => {
     }
 
     const updateChart = () => {
+      setLoading(false);
       const width = svgRef.current.clientWidth - margin.left - margin.right;
       const height = window.innerHeight * 0.5 - margin.top - margin.bottom;
 
@@ -130,8 +134,6 @@ const ScatterPlot = () => {
         .text("Monthly Income");
     };
 
-    updateChart();
-
     const handleResize = () => {
       svg.selectAll("*").remove();
       updateChart();
@@ -139,50 +141,62 @@ const ScatterPlot = () => {
 
     window.addEventListener("resize", handleResize);
 
-    return () => window.removeEventListener("resize", handleResize);
+    updateChart();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, [data, selectedGender, selectedDepartment, margin]);
 
   return (
     <>
-      <div className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8">
-        <div className="p-4 font-semibold text-white text-lg">
-          Age vs Income Scatter Plot
-        </div>
-        <label className="text-semibold text-white">Select Gender: </label>
-        <select
-          value={selectedGender}
-          onChange={(e) => setSelectedGender(e.target.value)}
-          className="bg-gray-800 text-white border border-gray-300 rounded-md px-2 py-1"
-        >
-          <option value="Both">Both</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-        </select>
+      {loading ? (
+        <Skeleton className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8 h-[40vh]"></Skeleton>
+      ) : (
+        <div className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8">
+          <div className="p-4 font-semibold text-white text-lg">
+            Age vs Income Scatter Plot
+          </div>
+          <label className="text-semibold text-white">Select Gender: </label>
+          <select
+            value={selectedGender}
+            onChange={(e) => setSelectedGender(e.target.value)}
+            className="bg-gray-800 text-white border border-gray-300 rounded-md px-2 py-1"
+          >
+            <option value="Both">Both</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
 
-        <label className="text-semibold text-white">Select Department: </label>
-        <select
-          value={selectedDepartment}
-          onChange={(e) => setSelectedDepartment(e.target.value)}
-          className="bg-gray-800 text-white border border-gray-300 rounded-md px-2 py-1"
-        >
-          <option value="All">All</option>
-          <option value="Research & Development">Research & Development</option>
-          <option value="Sales">Sales</option>
-          <option value="Human Resources">Human Resources</option>
-        </select>
+          <label className="text-semibold text-white">
+            Select Department:{" "}
+          </label>
+          <select
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            className="bg-gray-800 text-white border border-gray-300 rounded-md px-2 py-1"
+          >
+            <option value="All">All</option>
+            <option value="Research & Development">
+              Research & Development
+            </option>
+            <option value="Sales">Sales</option>
+            <option value="Human Resources">Human Resources</option>
+          </select>
 
-        <svg
-          ref={svgRef}
-          className="bg-gray-900 text-white border border-gray-300"
-          width="100%"
-          height="auto"
-        ></svg>
-        <div ref={tooltipRef} className="text-white" />
-        <div className="p-4 font-semibold text-white">
-          This is a scatter plot depicting the relationship between age and
-          income of employees filtering on gender and department.
+          <svg
+            ref={svgRef}
+            className="bg-gray-900 text-white border border-gray-300"
+            width="100%"
+            height="auto"
+          ></svg>
+          <div ref={tooltipRef} className="text-white" />
+          <div className="p-4 font-semibold text-white">
+            This is a scatter plot depicting the relationship between age and
+            income of employees filtering on gender and department.
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 };

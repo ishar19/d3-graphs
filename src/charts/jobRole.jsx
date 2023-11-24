@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
-
+import { Skeleton } from "@nextui-org/react";
 const JobPieChart = () => {
   const svgRef = useRef();
   const tooltipRef = useRef();
@@ -9,14 +9,19 @@ const JobPieChart = () => {
   const [selectedMaritalStatus, setSelectedMaritalStatus] = useState("All");
   const [selectedGender, setSelectedGender] = useState("Both");
   const [data, setData] = useState([]);
-
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     const fetchData = async () => {
-      const fetchedData = await d3.csv("../../data.csv");
+      const fetchedData = await d3.csv(
+        "https://raw.githubusercontent.com/ishar19/d3-graphs/master/data.csv"
+      );
       setData(fetchedData);
+      setLoading(false);
     };
-
-    fetchData();
+    const timeout = setTimeout(() => {
+      fetchData();
+    }, 1000);
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -107,7 +112,9 @@ const JobPieChart = () => {
       .style("font-size", "12px");
   }, [data, selectedOverTime, selectedMaritalStatus, selectedGender]);
 
-  return (
+  return loading ? (
+    <Skeleton className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8 h-[40vh]"></Skeleton>
+  ) : (
     <div className="bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-6">
       <h2 className="text-xl font-semibold p-4 text-gray-100">
         Job Role Pie Chart

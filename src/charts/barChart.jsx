@@ -1,15 +1,19 @@
 import { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
-
+import { Skeleton } from "@nextui-org/react";
 const BarChart = () => {
   const svgRef = useRef();
   const tooltipRef = useRef();
+  const [loading, setLoading] = useState(true);
   const [selectedGender, setSelectedGender] = useState("Both");
   const [processedData, setProcessedData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await d3.csv("../../data.csv");
+      const data = await d3.csv(
+        "https://raw.githubusercontent.com/ishar19/d3-graphs/master/data.csv"
+      );
+      setLoading(false);
       let filteredData = data;
 
       if (selectedGender !== "Both") {
@@ -28,8 +32,11 @@ const BarChart = () => {
 
       setProcessedData(newData);
     };
-
-    fetchData();
+    setLoading(true);
+    const timeout = setTimeout(() => {
+      fetchData();
+    }, 1000);
+    return () => clearTimeout(timeout);
   }, [selectedGender]);
 
   useEffect(() => {
@@ -99,33 +106,37 @@ const BarChart = () => {
 
   return (
     <>
-      <div className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8">
-        <h2 className="text-xl font-semibold p-4 text-gray-100">
-          Travel Frequency Bar Chart
-        </h2>
+      {loading ? (
+        <Skeleton className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8 h-[40vh]"></Skeleton>
+      ) : (
+        <div className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8">
+          <h2 className="text-xl font-semibold p-4 text-gray-100">
+            Travel Frequency Bar Chart
+          </h2>
 
-        <label className="text-semibold text-white ">Select Gender : </label>
-        <select
-          value={selectedGender}
-          onChange={(e) => setSelectedGender(e.target.value)}
-          className="bg-gray-800 text-white border border-gray-300 rounded-md px-2 py-1"
-        >
-          <option value="Both">Both</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-        </select>
-        <div ref={tooltipRef} className="text-white block" />
-        <svg
-          ref={svgRef}
-          className="bg-gray-900 text-white border border-gray-300"
-          width="100%"
-          height="auto"
-        ></svg>
-        <div className="p-4 font-semibold text-white">
-          This is a bar chart that shows the number of people who travels
-          frequently, rarely, and never.
+          <label className="text-semibold text-white ">Select Gender : </label>
+          <select
+            value={selectedGender}
+            onChange={(e) => setSelectedGender(e.target.value)}
+            className="bg-gray-800 text-white border border-gray-300 rounded-md px-2 py-1"
+          >
+            <option value="Both">Both</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+          <div ref={tooltipRef} className="text-white block" />
+          <svg
+            ref={svgRef}
+            className="bg-gray-900 text-white border border-gray-300"
+            width="100%"
+            height="auto"
+          ></svg>
+          <div className="p-4 font-semibold text-white">
+            This is a bar chart that shows the number of people who travels
+            frequently, rarely, and never.
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 };

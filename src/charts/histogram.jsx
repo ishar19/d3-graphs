@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
-
+import { Skeleton } from "@nextui-org/react";
 const Histogram = () => {
   const svgRef = useRef();
   const tooltipRef = useRef();
@@ -8,14 +8,19 @@ const Histogram = () => {
   const [selectedMaritalStatus, setSelectedMaritalStatus] = useState("All");
   const [selectedGender, setSelectedGender] = useState("Both");
   const [data, setData] = useState([]);
-
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     const fetchData = async () => {
-      const data = await d3.csv("../../data.csv");
+      const data = await d3.csv(
+        "https://raw.githubusercontent.com/ishar19/d3-graphs/master/data.csv"
+      );
       setData(data);
+      setLoading(false);
     };
-
-    fetchData();
+    const timeout = setTimeout(() => {
+      fetchData();
+    }, 1000);
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -134,7 +139,9 @@ const Histogram = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, [data, selectedOverTime, selectedMaritalStatus, selectedGender]);
 
-  return (
+  return loading ? (
+    <Skeleton className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8 h-[40vh]"></Skeleton>
+  ) : (
     <div className="bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-6">
       <h2 className="text-lg font-semibold p-4 text-gray-100">
         Job Level Histogram
