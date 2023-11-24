@@ -4,11 +4,10 @@ import * as d3 from "d3";
 const ScatterPlot = () => {
   const svgRef = useRef();
   const tooltipRef = useRef();
-  const xLabelRef = useRef();
-  const yLabelRef = useRef();
   const [selectedGender, setSelectedGender] = useState("Both");
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [data, setData] = useState([]);
+  const margin = { top: 20, right: 20, bottom: 60, left: 60 };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,93 +38,116 @@ const ScatterPlot = () => {
       );
     }
 
-    const margin = { top: 20, right: 20, bottom: 60, left: 60 };
-    const width = 600 - margin.left - margin.right;
-    const height = 400 - margin.top - margin.bottom;
+    const updateChart = () => {
+      const width = svgRef.current.clientWidth - margin.left - margin.right;
+      const height = window.innerHeight * 0.5 - margin.top - margin.bottom;
 
-    const x = d3
-      .scaleLinear()
-      .domain(d3.extent(filteredData, (d) => +d.Age))
-      .nice()
-      .range([margin.left, width]);
+      svg.attr(
+        "viewBox",
+        `0 0 ${width + margin.left + margin.right} ${
+          height + margin.top + margin.bottom
+        }`
+      );
 
-    const y = d3
-      .scaleLinear()
-      .domain([0, d3.max(filteredData, (d) => +d.MonthlyIncome)])
-      .nice()
-      .range([height, margin.top]);
+      const x = d3
+        .scaleLinear()
+        .domain(d3.extent(filteredData, (d) => +d.Age))
+        .nice()
+        .range([margin.left, width + margin.left]);
 
-    svg
-      .append("g")
-      .attr("transform", `translate(0, ${height})`)
-      .call(d3.axisBottom(x));
+      const y = d3
+        .scaleLinear()
+        .domain([0, d3.max(filteredData, (d) => +d.MonthlyIncome)])
+        .nice()
+        .range([height + margin.top, margin.top]); // Adjusted y-axis range
 
-    svg
-      .append("g")
-      .attr("transform", `translate(${margin.left}, 0)`)
-      .call(d3.axisLeft(y));
+      svg
+        .append("g")
+        .attr("transform", `translate(0, ${height + margin.top})`)
+        .call(d3.axisBottom(x));
 
-    const colorScale = d3
-      .scaleOrdinal()
-      .domain([
-        "Male",
-        "Female",
-        "Research & Development",
-        "Sales",
-        "Human Resources",
-      ])
-      .range(["blue", "red", "green", "orange", "purple"]);
+      svg
+        .append("g")
+        .attr("transform", `translate(${margin.left}, 0)`)
+        .call(d3.axisLeft(y));
 
-    svg
-      .selectAll(".dot")
-      .data(filteredData)
-      .enter()
-      .append("circle")
-      .attr("class", "dot")
-      .attr("cx", (d) => x(+d.Age))
-      .attr("cy", (d) => y(+d.MonthlyIncome))
-      .attr("r", 5)
-      .style("fill", (d) => colorScale(d.Gender + d.Department))
-      .on("mouseover", (event, d) => {
-        tooltip
-          .style("opacity", 0.9)
-          .html(
-            `Age: ${d.Age}<br>Income: ${d.MonthlyIncome}<br>Gender: ${d.Gender}<br>Department: ${d.Department}`
-          )
-          .style("left", `${event.pageX}px`)
-          .style("top", `${event.pageY - 28}px`);
-      })
-      .on("mouseout", () => {
-        tooltip.style("opacity", 0);
-      });
+      const colorScale = d3
+        .scaleOrdinal()
+        .domain([
+          "Male",
+          "Female",
+          "Research & Development",
+          "Sales",
+          "Human Resources",
+        ])
+        .range(["blue", "red", "green", "orange", "purple"]);
 
-    // Labels below the graph
-    svg
-      .append("text")
-      .attr("x", width / 2)
-      .attr("y", height + margin.top + 20)
-      .attr("text-anchor", "middle")
-      .style("font-size", "14px")
-      .style("fill", "white")
-      .text("Age")
-      .attr("ref", xLabelRef);
+      const dotSize = Math.min(8, width * 0.02); // Adjust dot size based on width
 
-    svg
-      .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("x", -height / 2)
-      .attr("y", -margin.left + 20)
-      .attr("text-anchor", "middle")
-      .style("font-size", "14px")
-      .style("fill", "white")
-      .text("Monthly Income")
-      .attr("ref", yLabelRef);
-  }, [data, selectedGender, selectedDepartment]);
+      svg
+        .selectAll(".dot")
+        .data(filteredData)
+        .enter()
+        .append("circle")
+        .attr("class", "dot")
+        .attr("cx", (d) => x(+d.Age))
+        .attr("cy", (d) => y(+d.MonthlyIncome))
+        .attr("r", dotSize)
+        .style("fill", (d) => colorScale(d.Gender + d.Department))
+        .on("mouseover", (event, d) => {
+          tooltip
+            .style("opacity", 0.9)
+            .html(
+              `Age: ${d.Age}<br>Income: ${d.MonthlyIncome}<br>Gender: ${d.Gender}<br>Department: ${d.Department}`
+            )
+            .style("left", `${event.pageX}px`)
+            .style("top", `${event.pageY - 28}px`);
+        })
+        .on("mouseout", () => {
+          tooltip.style("opacity", 0);
+        });
+
+      svg
+        .append("text")
+        .attr("x", width / 2 + margin.left)
+        .attr("y", height + margin.top + 20)
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .style("fill", "white")
+        .text("Age");
+
+      svg
+        .append("text")
+        .attr(
+          "transform",
+          `translate(${margin.left - 40}, ${
+            height / 2 + margin.top
+          }) rotate(-90)`
+        )
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .style("fill", "white")
+        .text("Monthly Income");
+    };
+
+    updateChart();
+
+    const handleResize = () => {
+      svg.selectAll("*").remove();
+      updateChart();
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, [data, selectedGender, selectedDepartment, margin]);
 
   return (
     <>
-      {/* Dropdowns for filters */}
-      <div>
+      <div className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8">
+        <div className="p-4 font-semibold text-white text-lg">
+          Age vs Income Scatter Plot
+        </div>
         <label className="text-semibold text-white">Select Gender: </label>
         <select
           value={selectedGender}
@@ -136,8 +158,7 @@ const ScatterPlot = () => {
           <option value="Male">Male</option>
           <option value="Female">Female</option>
         </select>
-      </div>
-      <div>
+
         <label className="text-semibold text-white">Select Department: </label>
         <select
           value={selectedDepartment}
@@ -149,14 +170,19 @@ const ScatterPlot = () => {
           <option value="Sales">Sales</option>
           <option value="Human Resources">Human Resources</option>
         </select>
+
+        <svg
+          ref={svgRef}
+          className="bg-gray-900 text-white border border-gray-300"
+          width="100%"
+          height="auto"
+        ></svg>
+        <div ref={tooltipRef} className="text-white" />
+        <div className="p-4 font-semibold text-white">
+          This is a scatter plot depicting the relationship between age and
+          income of employees filtering on gender and department.
+        </div>
       </div>
-      <svg
-        ref={svgRef}
-        className="bg-gray-900 text-white border border-gray-300"
-        width={600}
-        height={400}
-      ></svg>
-      <div ref={tooltipRef} className="text-white" />
     </>
   );
 };

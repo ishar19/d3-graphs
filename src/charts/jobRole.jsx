@@ -58,7 +58,14 @@ const JobPieChart = () => {
 
     const dataForPie = pie(Array.from(jobRoles));
 
-    const arc = d3.arc().innerRadius(0).outerRadius(100);
+    const width = Math.min(window.innerWidth, 400);
+    const height = width;
+
+    const radius = Math.min(width, height) / 2;
+
+    const arc = d3.arc().innerRadius(0).outerRadius(radius);
+
+    svg.attr("viewBox", `0 0 ${width} ${height}`).attr("width", "100%");
 
     svg
       .selectAll("path")
@@ -67,7 +74,7 @@ const JobPieChart = () => {
       .append("path")
       .attr("d", arc)
       .attr("fill", (d) => color(d.data[0]))
-      .attr("transform", "translate(200, 200)")
+      .attr("transform", `translate(${width / 2}, ${height / 2})`)
       .on("mouseover", (event, d) => {
         tooltip
           .style("opacity", 0.9)
@@ -101,17 +108,11 @@ const JobPieChart = () => {
   }, [data, selectedOverTime, selectedMaritalStatus, selectedGender]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "20px",
-      }}
-    >
-      <div
-        style={{ marginBottom: "10px", display: "flex", alignItems: "center" }}
-      >
+    <div className="bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-6">
+      <h2 className="text-xl font-semibold p-4 text-gray-100">
+        Job Role Pie Chart
+      </h2>
+      <div className="flex flex-row flex-wrap justify-center items-center mb-4">
         <label style={{ marginRight: "5px", color: "white" }}>
           Select OverTime:{" "}
         </label>
@@ -154,9 +155,18 @@ const JobPieChart = () => {
           <option value="Female">Female</option>
         </select>
       </div>
-      <svg ref={svgRef} width={400} height={400}></svg>
+      <svg
+        ref={svgRef}
+        width={400}
+        height={400}
+        className="bg-gray-900 text-white border border-gray-300"
+      ></svg>
       <div ref={tooltipRef} className="text-white"></div>
       <div ref={legendRef} className="text-white"></div>
+      <div className="p-4 font-semibold text-white">
+        This is a pie chart depicting the number of job roles of employees and
+        correlating it different criterias.
+      </div>
     </div>
   );
 };

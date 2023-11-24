@@ -6,6 +6,7 @@ const PieChart = () => {
   const tooltipRef = useRef();
   const [selectedGender, setSelectedGender] = useState("Both");
   const [processedData, setProcessedData] = useState([]);
+  const containerWidth = 300; // Adjust this to suit the container's width
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,10 +43,9 @@ const PieChart = () => {
     if (processedData.length === 0) return;
 
     const margin = 40;
-    const width = 400;
-    const height = 400;
-
-    const radius = Math.min(width, height) / 2 - margin;
+    const width = containerWidth - margin * 2;
+    const height = containerWidth - margin * 2;
+    const radius = Math.min(width, height) / 2;
 
     const color = d3.scaleOrdinal().range(d3.schemeCategory10);
 
@@ -57,12 +57,16 @@ const PieChart = () => {
     const arc = d3.arc().innerRadius(0).outerRadius(radius);
 
     const arcs = svg
+      .append("g")
+      .attr(
+        "transform",
+        `translate(${containerWidth / 2},${containerWidth / 2})`
+      ) // Centering the arcs group
       .selectAll("arc")
       .data(pie(processedData))
       .enter()
       .append("g")
-      .attr("class", "arc")
-      .attr("transform", `translate(${width / 2},${height / 2})`);
+      .attr("class", "arc");
 
     arcs
       .append("path")
@@ -89,24 +93,27 @@ const PieChart = () => {
 
     legend
       .append("rect")
-      .attr("x", width - 18)
+      .attr("x", containerWidth - 18)
       .attr("width", 18)
       .attr("height", 18)
       .attr("fill", (d, i) => color(i));
 
     legend
       .append("text")
-      .attr("x", width - 24)
+      .attr("x", containerWidth - 24)
       .attr("y", 9)
       .attr("dy", ".35em")
       .style("text-anchor", "end")
       .attr("fill", "white")
       .text((d) => d.label);
-  }, [processedData]);
+  }, [processedData, containerWidth]);
 
   return (
     <>
-      <div>
+      <div className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8">
+        <h2 className="text-xl font-semibold p-4 text-gray-100">
+          Martial Status Pie Chart
+        </h2>
         <label className="text-semibold text-white ">Select Gender : </label>
         <select
           value={selectedGender}
@@ -117,14 +124,20 @@ const PieChart = () => {
           <option value="Male">Male</option>
           <option value="Female">Female</option>
         </select>
+
+        <svg
+          ref={svgRef}
+          className="bg-gray-900 text-white border border-gray-300"
+          width={containerWidth}
+          height={containerWidth}
+          viewBox={`0 0 ${containerWidth} ${containerWidth}`}
+        ></svg>
+        <div ref={tooltipRef} className="text-white" />
+        <div className="p-4 font-semibold text-white">
+          This is a pie chart depicting the number of marital status of
+          employees and correlating it different gender.
+        </div>
       </div>
-      <svg
-        ref={svgRef}
-        className="bg-gray-900 text-white border border-gray-300"
-        width={400}
-        height={400}
-      ></svg>
-      <div ref={tooltipRef} className="text-white" />
     </>
   );
 };

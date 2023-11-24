@@ -40,9 +40,9 @@ const BarChart = () => {
 
     if (processedData.length === 0) return;
 
-    const margin = { top: 20, right: 30, bottom: 70, left: 60 };
-    const width = 600 - margin.left - margin.right;
-    const height = 400 - margin.top - margin.bottom;
+    const margin = { top: 30, right: 30, bottom: 70, left: 60 };
+    const width = 400 - margin.left - margin.right;
+    const height = 250 - margin.top - margin.bottom;
 
     const x = d3
       .scaleBand()
@@ -56,9 +56,18 @@ const BarChart = () => {
       .nice()
       .range([height, 0]);
 
-    svg
+    svg.attr(
+      "viewBox",
+      `0 0 ${width + margin.left + margin.right} ${
+        height + margin.top + margin.bottom
+      }`
+    );
+
+    const chart = svg
       .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`)
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    chart
       .selectAll(".bar")
       .data(processedData)
       .enter()
@@ -83,20 +92,18 @@ const BarChart = () => {
     const xAxis = d3.axisBottom(x);
     const yAxis = d3.axisLeft(y);
 
-    svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},${height + margin.top})`)
-      .call(xAxis);
+    chart.append("g").attr("transform", `translate(0, ${height})`).call(xAxis);
 
-    svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`)
-      .call(yAxis);
+    chart.append("g").call(yAxis);
   }, [processedData]);
 
   return (
     <>
-      <div>
+      <div className="relative bg-gray-800 rounded-md shadow-md flex justify-center flex-col items-center p-8">
+        <h2 className="text-xl font-semibold p-4 text-gray-100">
+          Travel Frequency Bar Chart
+        </h2>
+
         <label className="text-semibold text-white ">Select Gender : </label>
         <select
           value={selectedGender}
@@ -107,14 +114,18 @@ const BarChart = () => {
           <option value="Male">Male</option>
           <option value="Female">Female</option>
         </select>
+        <div ref={tooltipRef} className="text-white block" />
+        <svg
+          ref={svgRef}
+          className="bg-gray-900 text-white border border-gray-300"
+          width="100%"
+          height="auto"
+        ></svg>
+        <div className="p-4 font-semibold text-white">
+          This is a bar chart that shows the number of people who travels
+          frequently, rarely, and never.
+        </div>
       </div>
-      <svg
-        ref={svgRef}
-        className="bg-gray-900 text-white border border-gray-300"
-        width={"50vw"}
-        height={400}
-      ></svg>
-      <div ref={tooltipRef} className="text-white" />
     </>
   );
 };
